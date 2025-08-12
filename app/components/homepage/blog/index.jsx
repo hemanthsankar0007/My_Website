@@ -1,9 +1,36 @@
 // @flow strict
+"use client";
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
+import { personalData } from "@/utils/data/personal-data";
 import BlogCard from './blog-card';
 
-function Blog({ blogs }) {
+function Blog({ blogs: initialBlogs = [] }) {
+  const [blogs, setBlogs] = useState(initialBlogs);
+  const [loading, setLoading] = useState(initialBlogs.length === 0);
+
+  useEffect(() => {
+    if (initialBlogs.length === 0) {
+      // Fetch blogs client-side if not provided
+      const fetchBlogs = async () => {
+        try {
+          const res = await fetch(`https://dev.to/api/articles?username=${personalData.devUsername}`);
+          if (res.ok) {
+            const data = await res.json();
+            const filtered = data.filter((item) => item?.cover_image).sort(() => Math.random() - 0.5);
+            setBlogs(filtered);
+          }
+        } catch (error) {
+          console.error('Error fetching blogs:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchBlogs();
+    }
+  }, [initialBlogs]);
 
   return (
     <div id='blogs' className="relative z-50 border-t my-12 lg:my-24 border-[#25213b]">
@@ -25,14 +52,27 @@ function Blog({ blogs }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 lg:gap-8 xl:gap-10">
-        {
-          blogs.slice(0, 6).map((blog, i) => (
-            blog?.cover_image &&
-            <BlogCard blog={blog} key={i} />
-          ))
-        }
-      </div>
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="text-white">Loading blogs...</div>
+        </div>
+      ) : blogs.length === 0 ? (
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="text-white text-center">
+            <p className="text-lg mb-2">No blogs available</p>
+            <p className="text-gray-400">Check back later for new content!</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 lg:gap-8 xl:gap-10">
+          {
+            blogs.slice(0, 6).map((blog, i) => (
+              blog?.cover_image &&
+              <BlogCard blog={blog} key={i} />
+            ))
+          }
+        </div>
+      )}
 
       <div className="flex justify-center  mt-5 lg:mt-12">
         <Link
